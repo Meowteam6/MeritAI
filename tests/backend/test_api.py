@@ -5,6 +5,8 @@ asserted without a real token. Endpoints that hit Supabase (match) are covered
 by the live verification path, not here.
 """
 
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from backend.auth import AuthUser, get_current_user
@@ -37,8 +39,10 @@ def test_me_returns_user_when_authenticated():
 
 def test_health_shape():
     """/health always returns the expected shape and never raises."""
-    with TestClient(app) as client:
-        resp = client.get("/health")
+    with patch("backend.main.supabase_client.get_conn") as get_conn:
+        get_conn.return_value.execute.return_value = None
+        with TestClient(app) as client:
+            resp = client.get("/health")
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"

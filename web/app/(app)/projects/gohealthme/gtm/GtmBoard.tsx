@@ -64,21 +64,21 @@ export function GtmBoard() {
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setItems(parsed.filter((item): item is Entry =>
+          queueMicrotask(() => setItems(parsed.filter((item): item is Entry =>
             typeof item === "object" && item !== null &&
             typeof item.id === "string" && typeof item.name === "string" &&
-            channels.includes(item.channel) && statuses.includes(item.status)));
+            channels.includes(item.channel) && statuses.includes(item.status))));
         }
       }
     } catch {
-      setMessage("Saved entries could not be loaded. Your current browser may restrict local storage.");
+      queueMicrotask(() => setMessage("Saved entries could not be loaded. Your current browser may restrict local storage."));
     }
-    setReady(true);
+    queueMicrotask(() => setReady(true));
   }, []);
   useEffect(() => {
     if (!ready) return;
     try { window.localStorage.setItem(KEY, JSON.stringify(items)); }
-    catch { setMessage("Changes could not be saved in this browser."); }
+    catch { queueMicrotask(() => setMessage("Changes could not be saved in this browser.")); }
   }, [ready, items]);
   const visible = useMemo(
     () => items.filter((item) =>

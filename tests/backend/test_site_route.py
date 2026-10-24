@@ -56,8 +56,9 @@ def _authed():
     )
     app.dependency_overrides[require_llm_key] = lambda: None
     try:
-        with TestClient(app) as client:
-            yield client
+        with patch("backend.routers.site.quotas.enforce", return_value=None):
+            with TestClient(app) as client:
+                yield client
     finally:
         app.dependency_overrides.clear()
 
@@ -74,8 +75,9 @@ def _authed_no_key():
         id=USER_ID, email="clown@example.com"
     )
     try:
-        with TestClient(app) as client:
-            yield client
+        with patch("backend.routers.site.quotas.enforce", return_value=None):
+            with TestClient(app) as client:
+                yield client
     finally:
         app.dependency_overrides.clear()
 

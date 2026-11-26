@@ -20,7 +20,7 @@ export default function GoalsPage(){
     const db=createClient();
     const {data:{user},error:authError}=await db.auth.getUser();
     if(authError || !user) throw new Error("Sign in to access goals.");
-    const {data,error}=await db.from("personal_goals").select("values").eq("user_id",user.id).maybeSingle();
+    const {data,error}=await db.schema("develop").from("personal_goals").select("values").eq("user_id",user.id).maybeSingle();
     if(error) throw error;
     if(active){setValues(data?.values ?? {});setReady(true);}
    } catch {if(active)setMessage("Unable to load goals. Check sign-in and database setup.");}
@@ -33,7 +33,7 @@ export default function GoalsPage(){
    const db=createClient();
    const {data:{user},error:authError}=await db.auth.getUser();
    if(authError || !user) throw new Error("Sign in required");
-   const {error}=await db.from("personal_goals").upsert({user_id:user.id,values,updated_at:new Date().toISOString()});
+   const {error}=await db.schema("develop").from("personal_goals").upsert({user_id:user.id,values,updated_at:new Date().toISOString()});
    if(error) throw error;
    setMessage("Saved.");
   }catch{setMessage("Save failed. Your changes have not been saved.");}finally{setSaving(false);}

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Activity from "./Activity";
 import { createClient } from "@/lib/supabase/client";
 
 const fields = [
@@ -50,5 +51,6 @@ export default function GoalsPage(){
    {fields.map(([key,label])=><label key={key} className="flex flex-col gap-1 text-sm">{label}<input className="rounded-xl border border-black/15 bg-surface p-3" type="number" min="0" step="1" disabled={!ready||saving} value={values[key]??""} onChange={e=>{const n=e.target.valueAsNumber;setValues(old=>({...old,[key]:Number.isFinite(n)?Math.max(0,n):0}));}}/></label>)}
    <button className="rounded-xl bg-primary p-3 text-white disabled:opacity-50" disabled={!ready||saving} type="submit">{saving?"Saving…":"Save goals"}</button>
   </form><p role="status">{message || (!ready?"Loading…":"")}</p>
+  <Activity/>
  </div>;
 }

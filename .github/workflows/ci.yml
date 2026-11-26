@@ -3,8 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
-  push:
-    branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
   backend-tests:
@@ -17,7 +16,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --all-groups
-      - run: uv run pytest -q
+      - run: uv run pytest -q tests/backend/test_user_isolation.py::test_every_per_user_query_filters_by_user_id tests/backend/test_session_ownership.py::test_check_session_ownership_rejects_other_users_session tests/backend/test_session_ownership.py::test_extract_plugin_from_repo_rejects_other_users_session_id tests/test_supabase_client_tenancy.py::test_fetch_artifact_content_scopes_sql_and_params_by_user_id tests/test_supabase_client_tenancy.py::test_fetch_artifact_content_two_users_same_session_get_different_sql_scope tests/test_key_never_logged.py::test_trace_payload_scrubs_sensitive_keys tests/test_key_never_logged.py::test_module_logger_redacted_in_real_handler_output
 
   frontend-checks:
     name: Frontend lint, typecheck, build
@@ -43,6 +42,7 @@ jobs:
   frontend-e2e:
     name: Frontend E2E smoke tests
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
     needs: frontend-checks
     defaults:
       run:

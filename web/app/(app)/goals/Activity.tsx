@@ -17,9 +17,9 @@ export default function Activity(){
   if(authError||!user) throw new Error("Authentication required");
   const {data,error}=await db.from("profile_activity").select("id,kind,title,body,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(50);
   if(error) throw error;
-  setEntries(data??[]);setReady(true);
+  return data??[];
  }
- useEffect(()=>{void load().catch(()=>setStatus("Unable to load activity. Check database migration and sign-in."));},[]);
+ useEffect(()=>{let active=true;void load().then(data=>{if(active){setEntries(data);setReady(true);}}).catch(()=>{if(active)setStatus("Unable to load activity. Check database migration and sign-in.");});return ()=>{active=false;};},[]);
  async function save(){
   if(busy||!ready||!title.trim())return;
   setBusy(true);setStatus("");
@@ -31,7 +31,7 @@ export default function Activity(){
    const {error}=await db.from("profile_activity").upsert({user_id:user.id,kind,title:title.trim(),body,source:"web",request_id:request.current},{onConflict:"user_id,request_id",ignoreDuplicates:true});
    if(error)throw error;
    request.current=null;setTitle("");setBody("");setStatus("Saved to your profile.");
-   try{await load();}catch{setStatus("Saved, but history could not refresh.");}
+   try{setEntries(await load());}catch{setStatus("Saved, but history could not refresh.");}
   }catch{setStatus("Save not confirmed. Retry without editing to reuse the request ID.");}
   finally{setBusy(false);}
  }

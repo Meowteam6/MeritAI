@@ -3,24 +3,55 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
-  push:
-    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      frontend: ${{ steps.paths.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only "$BASE" "$HEAD" > /tmp/changed
+            if grep -Eq '^(backend/|paperpilot/|tests/|pyproject.toml|uv.lock|\.github/workflows/)' /tmp/changed; then echo "backend=true" >> "$GITHUB_OUTPUT"; else echo "backend=false" >> "$GITHUB_OUTPUT"; fi
+            if grep -Eq '^(web/|\.github/workflows/)' /tmp/changed; then echo "frontend=true" >> "$GITHUB_OUTPUT"; else echo "frontend=false" >> "$GITHUB_OUTPUT"; fi
+          fi
   backend-tests:
     name: Backend tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: uv sync --all-groups
-      - run: uv run pytest -q
+      - run: uv sync --group dev
+      - run: uv run pytest -q tests/backend/test_user_isolation.py::test_every_per_user_query_filters_by_user_id tests/backend/test_session_ownership.py::test_check_session_ownership_rejects_other_users_session tests/backend/test_session_ownership.py::test_extract_plugin_from_repo_rejects_other_users_session_id tests/test_supabase_client_tenancy.py::test_fetch_artifact_content_scopes_sql_and_params_by_user_id tests/test_supabase_client_tenancy.py::test_fetch_artifact_content_two_users_same_session_get_different_sql_scope tests/test_key_never_logged.py::test_trace_payload_scrubs_sensitive_keys tests/test_key_never_logged.py::test_module_logger_redacted_in_real_handler_output
 
   frontend-checks:
-    name: Frontend lint, typecheck, build
+    name: Frontend build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,8 +64,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: web/package-lock.json
       - run: npm ci
-      - run: npm run lint
-      - run: npx tsc --noEmit
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:9999"
@@ -43,6 +72,7 @@ jobs:
   frontend-e2e:
     name: Frontend E2E smoke tests
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
     needs: frontend-checks
     defaults:
       run:

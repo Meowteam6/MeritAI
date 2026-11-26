@@ -15,7 +15,7 @@ export default function Activity(){
   const db=createClient();
   const {data:{user},error:authError}=await db.auth.getUser();
   if(authError||!user) throw new Error("Authentication required");
-  const {data,error}=await db.from("profile_activity").select("id,kind,title,body,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(50);
+  const {data,error}=await db.schema("develop").from("profile_activity").select("id,kind,title,body,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(50);
   if(error) throw error;
   return data??[];
  }
@@ -28,7 +28,7 @@ export default function Activity(){
    const {data:{user},error:authError}=await db.auth.getUser();
    if(authError||!user)throw new Error("Authentication required");
    request.current??=crypto.randomUUID();
-   const {error}=await db.from("profile_activity").upsert({user_id:user.id,kind,title:title.trim(),body,source:"web",request_id:request.current},{onConflict:"user_id,request_id",ignoreDuplicates:true});
+   const {error}=await db.schema("develop").from("profile_activity").upsert({user_id:user.id,kind,title:title.trim(),body,source:"web",request_id:request.current},{onConflict:"user_id,request_id",ignoreDuplicates:true});
    if(error)throw error;
    request.current=null;setTitle("");setBody("");setStatus("Saved to your profile.");
    try{setEntries(await load());}catch{setStatus("Saved, but history could not refresh.");}
